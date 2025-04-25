@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ template "app.name" . }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "app.labels" . | nindent 8 }}
+      annotations:
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+    spec:
+      securityContext:
+        {{- include "app.securitycontext" . | nindent 8 }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecrets }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        env:
+          - name: "BASE_URL"
+            value: {{ .Values.config.baseURL }}
+          - name: "CRYPTO_ALGO"
+            value: {{ .Values.config.cryptoAlgo }}
+          - name: "IDENTITY_PROVIDER_OID_URL"
+            value: {{ .Values.config.identityProviderOidURL }}
+          - name: "VAULT_URL"
+            value: {{ .Values.config.vaultURL }}
+          - name: "VAULT_TOKEN"
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.config.vaultToken.name }}
+                key: {{ .Values.config.vaultToken.key }}
+          - name: "KONG_ADMIN_API_URL"
+            value: {{ .Values.config.kongAdminApiURL }}
+          - name: "TSA_GET_DID_CONFIGURATION_URL"
+            value: {{ .Values.config.tsaGetDidConfigurationUrl }}
+          - name: "TSA_SAVE_DID_CONFIGURATION_URL"
+            value: {{ .Values.config.tsaSaveDidConfigurationUrl }}
+          - name: "OCM_ENDPOINTS"
+            value: {{ .Values.config.ocmEndpoints }}
+          - name: PORT
+            value: "{{ .Values.server.http.port }}"
+          - name: "KONG_SERVICE_ID"
+            value: {{ .Values.config.kongServiceId }}
+          - name: "TOKEN_ROLES_PATH"
+            value: {{ .Values.config.tokenRolesPath }}
+          - name: "TOKEN_CONTEXT_PATH"
+            value: {{ .Values.config.tokenContextPath }}
+          - name: "REQUIRED_CLAIMS"
+            value: {{ .Values.config.requiredClaims | toJson | quote }} 
+          - name: "CLAIM_MAPPING_URL"
+            value: {{ .Values.config.claimMappingUrl }} 
+          - name: "BASE_PATH"
+            value: {{ .Values.config.basePath }}     
+          - name: "TSA_SERVICE_URL"
+            value: {{ .Values.config.tsaServiceUrl }}                           
+        ports:
+        - name: http
+          containerPort: {{ .Values.server.http.port }}
+        readinessProbe:
+          httpGet:
+            path: /isAlive
+            port: {{ .Values.server.http.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 2
+          failureThreshold: 2
+          timeoutSeconds: 5
