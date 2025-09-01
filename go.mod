@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.4.2
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/vault/api v1.8.2
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.uber.org/zap v1.23.0
